@@ -4,33 +4,83 @@ import * as Z from './Unzip'
 const { zip } = Z
 
 export default (props) => {
-  const [entries, setEntries] = useState([])
-  const [url, setURL] = useState(null)
+  const [docs, setDocs] = useState([])
+  const [styles, setStyles] = useState([])
 
-  const view = (entry) => {
-    const ext = entry.filename.split('.').pop()
-    let type = 'text/html'
-    switch(ext) {
-      case 'jpg':
-      case 'jpeg':
-        type = 'image/jpeg'
-        break
-      case 'png':
-        type = 'image/png'
-        break
-      case 'css':
-        type = 'text/css'
-        break
-      case 'html':
-      case 'htm':
-        type = 'text/html'
-        break
-      default:
-        type = 'text/plain'
-    }
-    const writer = new zip.BlobWriter(type)
-    entry.getData(writer, (blob) => {
-      setURL(URL.createObjectURL(blob))
+  const process = (entries) => {
+    const content = entries.find(
+      e => e.filename === 'OEBPS/content.opf'
+    )
+    const writer = new zip.BlobWriter('text/xml')
+    content.getData(writer, (blob) => {
+      const reader = new FileReader()
+      reader.onload = async () => {
+        const doc = (new DOMParser()).parseFromString(reader.result, 'text/xml')
+        const spine = doc.querySelectorAll('spine itemref')
+        let manifest = [], images = {}, styles = []
+        for(const val of spine.values()) {
+          const ref = val.attributes['idref'].value
+          const item = doc.querySelector(`manifest #${ref}`)
+          const file = item.attributes['href'].value
+          manifest.push(entries.find(
+            e => e.filename === `OEBPS/${file}`
+          ))
+        }
+        let promises = []
+        doc.querySelectorAll('item').forEach((item) => {
+          const type = item.attributes['media-type'].value
+          const href = item.attributes['href'].value
+          if(/^(image\/|text\/css)/.test(type)) {
+            promises.push(new Promise((resolve, reject) => {
+              const writer = new zip.BlobWriter(type)
+              const entry = entries.find(
+                e => e.filename === `OEBPS/${href}`
+              )
+              entry.getData(writer, (blob) => {
+                if(/^image\//.test(type)) {
+                  images[href] = URL.createObjectURL(blob)
+                } else if(type === 'text/css') {
+                  styles.push(URL.createObjectURL(blob))
+                }
+                resolve()
+              })
+            }))
+          }
+        })
+        await Promise.allSettled(promises)
+        setStyles(styles)
+        promises = manifest.map((m) => 
+          new Promise((resolve, reject) => {
+            const writer = new zip.BlobWriter('text/html')
+            m.getData(writer, (blob) => {
+              const reader = new FileReader()
+              reader.onload = () => {
+                const doc = (new DOMParser()).parseFromString(reader.result, 'text/html')
+                doc.querySelectorAll('img').forEach((img) => {
+                  const href = img.attributes['src'].value
+                  img.setAttribute('src', images[href])
+                })
+                doc.querySelectorAll('a').forEach((link) => {
+                  if(link.attributes['href']) {
+                    const href = link.attributes['href'].value
+                    if(/#/.test(href)) {
+                      link.setAttribute('href', href.replace(/^.*#/, '#'))
+                    }
+                  }
+                })
+                resolve(doc)
+              }
+              reader.readAsText(blob)
+            })
+          })
+        )
+        Promise.allSettled(promises).then((res) => {
+          let elems = res.map(r => r.value.querySelectorAll('body > *'))
+          elems = elems.map(e => Array.from(e)).flat()
+          setDocs(elems)
+        })
+      }
+      reader.readAsText(blob)
     })
   }
 
@@ -39,7 +89,7 @@ export default (props) => {
     .then(async (res) => {
       const reader = new zip.HttpReader('pg34488-images.epub')
       zip.createReader(reader, function(zipReader) {
-        zipReader.getEntries(setEntries)
+        zipReader.getEntries(process)
       }, console.error)
     })
   }, [])
@@ -51,15 +101,13 @@ export default (props) => {
       <meta name="theme-color" content="#000000" />
       <link rel="apple-touch-icon" href="logo192.png" />
       <link rel="manifest" href="manifest.json" />
+      {styles.map((s, i) => <link key={i} rel='stylesheet' href={s}/>)}
       <title>Μïmir</title>
     </head>
     <body>
-      <ul>
-        {entries.map((e, i) => (
-          <li key={i} onClick={() => view(e)}>{e.filename}</li>
-        ))}
-      </ul>
-      {url && <iframe style={{width: '100%', height: '50vh'}} src={url}/>}
+      {docs.map((d, i) => (
+        <div key={i} dangerouslySetInnerHTML={{__html: d.outerHTML}}/>
+      ))}
     </body>
   </React.Fragment>
 }

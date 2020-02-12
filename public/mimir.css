@@ -1,0 +1,15 @@
+body {
+  column-width: 100vw;
+  max-height: calc(100vh - 2.5em); /* bottom scrollbar */
+  margin: auto; /* breaks pagination */
+}
+
+body > .content {
+  margin: 2em;
+}
+
+img {
+  max-width: 100%;
+  max-height: calc(100vh - 2.5em);
+  break-inside: avoid;
+}

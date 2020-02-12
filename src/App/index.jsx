@@ -1,11 +1,16 @@
 import React, { useEffect, useState } from 'react'
-import './App.css'
-import * as Z from './Unzip'
+import './index.css'
+import * as Mimir from '../mimir'
+import * as Z from '../Unzip'
 const { zip } = Z
 
 export default (props) => {
   const [docs, setDocs] = useState([])
   const [styles, setStyles] = useState([])
+  const [url, setURL] = useState(
+    //'//cloudfare-ipfs.com/ipfs/QmQbKnEybE89wrQeK2TAaGjwstWimyRJt7cDWCN1ptzzkX'
+    'http://localhost/.../guten-cache/cache/epub/34488/pg34488-images.epub'
+  )
 
   const process = (entries) => {
     const content = entries.find(
@@ -85,14 +90,11 @@ export default (props) => {
   }
 
   useEffect(() => {
-    fetch('pg34488-images.epub')
-    .then(async (res) => {
-      const reader = new zip.HttpReader('pg34488-images.epub')
-      zip.createReader(reader, function(zipReader) {
-        zipReader.getEntries(process)
-      }, console.error)
-    })
-  }, [])
+    const reader = new zip.HttpReader(url)
+    zip.createReader(reader, function(zipReader) {
+      zipReader.getEntries(process)
+    }, console.error)
+  }, [url])
 
   return <React.Fragment>
     <head>
@@ -102,12 +104,15 @@ export default (props) => {
       <link rel="apple-touch-icon" href="logo192.png" />
       <link rel="manifest" href="manifest.json" />
       {styles.map((s, i) => <link key={i} rel='stylesheet' href={s}/>)}
+      <link rel='stylesheet' href='mimir.css'/>
       <title>Μïmir</title>
     </head>
     <body>
-      {docs.map((d, i) => (
-        <div key={i} dangerouslySetInnerHTML={{__html: d.outerHTML}}/>
-      ))}
+      <div className='content'>
+        {docs.map((d, i) => (
+          <div key={i} dangerouslySetInnerHTML={{__html: d.outerHTML}}/>
+        ))}
+      </div>
     </body>
   </React.Fragment>
 }

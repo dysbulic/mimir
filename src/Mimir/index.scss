@@ -1,0 +1,20 @@
+.mimir {
+  & > .frame {
+    max-width: 100vh;
+    overflow-x: scroll;
+    margin: auto;
+
+    & > .content {
+      max-height: calc(100vh - 2em); // clientHeight
+      column-width: 100vh;
+      column-gap: 0;
+
+      img {
+        max-width: 100%;
+        max-height: calc(100vh - 2em);
+        break-inside: avoid;
+        box-sizing: border-box;
+      }
+    }
+  }
+}

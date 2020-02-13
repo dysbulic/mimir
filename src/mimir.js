@@ -1,10 +1,11 @@
 const setPage = (p) => {
   if(isNaN(p)) return
   const ww = window.innerWidth
+  //const ww = window.outerWidth
   const dw = document.documentElement.scrollWidth
-  console.log(ww, dw, dw / ww)
   //window.scroll(dw / Math.round(dw / ww) * p, 0)
   window.scroll(ww * p, 0)
+  console.log(p, window.scrollX, ww * p, dw, dw / ww)
   if(window.parent !== window) {
     window.parent.postMessage({ type: 'pageSet', page: p }, '*')
   }

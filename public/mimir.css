@@ -2,10 +2,10 @@ body {
   column-width: 100vw;
   max-height: calc(100vh - 2.5em); /* bottom scrollbar */
   margin: auto; /* breaks pagination */
+  position: relative;
 }
 
-body > .content {
-  margin: 2em;
+.mimir-content {
 }
 
 img {

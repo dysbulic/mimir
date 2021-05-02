@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import { useSwipeable } from 'react-swipeable'
 import {
   Box, Button, Icon, Stack, Flex, Drawer,
   DrawerOverlay, DrawerHeader, DrawerBody, DrawerFooter,
@@ -7,11 +6,6 @@ import {
 } from '@chakra-ui/react'
 import { BiCollection, BiDockLeft } from 'react-icons/bi'
 import { EpubView } from '..'
-
-const Swipeable = ({children, ...props}) => {
-  const handlers = useSwipeable(props)
-  return (<Box {...handlers}>{children}</Box>)
-}
 
 const ToCItem = ({
   label, setLocation, href, ...props
@@ -43,10 +37,10 @@ const ReactReader = ({
   const onToCChange = ({ toc }) => (
     setToC(toc)
   )
-  const setLocation = ({ location }) => (
+  const setLocation = ({ location }) => {
     onClose()
-    //locationChanged(location)
-  )
+    locationChanged?.(location)
+  }
   const ToCToggle = () => (
     <Button position="absolute" left={25} onClick={onToggle}>
       <Icon as={isOpen ? BiDockLeft : BiCollection}/>
@@ -92,41 +86,30 @@ const ReactReader = ({
   )
 
   return (
-    <Flex h="100%">
+    <Flex id="inner" grow={1} h="100%" position="relative">
       {showToC && toc && <ToC/>}
       <Flex
-        height="100%" width="100%"
+        height="100%"
         backgroundColor="#FFF"
       >
-        {showToC && <ToCToggle/>}
-        <Box
-          position="absolute"
-          top={1} left="50vw"
-          transform="translateX(-50%)"
-          textAlign="center"
-          color="#999"
-        >{title}</Box>
-        {/* <Swipeable
-          onSwipedRight={prev}
-          onSwipedLeft={next}
-          trackMouse
-          id="swipeable"
-          style={{ width: '100%' }}
-        > */}
+        {/* {showToC && <ToCToggle/>} */}
+        <Stack align="center">
+          <Box
+            id="title"
+            position="absolute"
+            top={1} left="50vw"
+            transform="translateX(-50%)"
+            textAlign="center"
+            color="#999"
+          >{title}</Box>
           <EpubView
             ref={readerRef}
             {...props}
+            grow={1}
             tocChanged={onToCChange}
             {...{ locationChanged, loadingView }}
           />
-          {/* {swipeable && (
-            <Flex
-              position="absolute"
-              top={0} left={0} bottom={0} right={0}
-              zIndex={200}
-            />
-          )} */}
-        {/* </Swipeable> */}
+        </Stack>
         <Button
           position="absolute" left={0} top="5vh"
           h="80%" fontSize={100} opacity={0.75} onClick={prev}

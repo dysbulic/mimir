@@ -134,7 +134,7 @@ class EpubView extends Component {
   }
 
   renderBook() {
-   return <Flex id="book" h="100%" ref={this.viewerRef}/>
+    return <Flex id="book" h="100%" ref={this.viewerRef}/>
   }
 
   handleKeyPress = ({ key }) => {

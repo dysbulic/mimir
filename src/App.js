@@ -2,7 +2,7 @@ import React, { Component } from 'react'
 import FileReaderInput from 'react-file-reader-input'
 import {
   chakra, Box, Heading, Link, Stack, Text, Flex, Button,
-  Spacer, Icon,
+  Spacer, Icon, Spinner,
 } from '@chakra-ui/react'
 import { BiExpand, BiUpload } from 'react-icons/bi'
 import { ReactReader } from './modules'
@@ -87,8 +87,8 @@ export default class App extends Component {
       fullscreen, location, localFile, localName
     } = this.state
     return (
-      <Stack>
-        <Heading hidden={fullscreen}>
+      <Stack id="app">
+        <Heading id="header" hidden={fullscreen}>
           <Flex>
             <Link href="https://github.com/gerhardsletten/react-reader">
               <chakra.img w="8rem" h="8rem" src={logo}/>
@@ -127,13 +127,14 @@ export default class App extends Component {
             </Stack>
           </Flex>
         </Heading>
-        <Box h={`calc(95vh - ${fullscreen ? 0 : 5}rem)`}>
+        <Box id="reader" h={`calc(95vh - ${fullscreen ? 0 : 5}rem)`}>
           <ReactReader
             url={localFile || DEMO_URL}
             title={localName || DEMO_NAME}
             location={location}
             locationChanged={this.onLocationChanged}
             getRendition={this.getRendition}
+            loadingView={<Spinner/>}
           />
           <Button
             opacity={0.5}

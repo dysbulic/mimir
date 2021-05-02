@@ -1,17 +1,23 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import './index.scss'
-//import * as Mimir from '../mimir'
+import { Link, useHistory } from 'react-router-dom'
+import { Button, Carousel, Tooltip, Icon, Menu, Dropdown, Tag, Input } from 'antd'
+import { useLocation } from 'react-router-dom'
 import * as Z from '../Unzip'
 const { zip } = Z
 
 export default (props) => {
   const [docs, setDocs] = useState([])
   const [styles, setStyles] = useState([])
-  const [url, setURL] = useState(
-    //'//cloudfare-ipfs.com/ipfs/QmQbKnEybE89wrQeK2TAaGjwstWimyRJt7cDWCN1ptzzkX'
-    'http://localhost/.../guten-cache/cache/epub/34488/pg34488-images.epub'
-  )
+  const location = useLocation()
+  const params = (new URLSearchParams(location.search))
+  const [url, setURL] = useState(params.get('url'))
   const frame = useRef()
+  const [images, setImages] = useState([])
+  const [index, setIndex] = useState(null)
+  const [paths, setPaths] = useState([])
+  const history = useHistory()
+  const carousel = useRef()
 
   const setPage = (p) => {
     if(isNaN(p)) return
@@ -21,7 +27,7 @@ export default (props) => {
   
   const deltaPage = (d) => {
     const f = frame.current
-    const curr = Math.round(f.scrollLeft / f.offsetWidth)
+    const curr = Math.round(f.scrollLeft / f.clientWidth)
     setPage(curr + d)
   }
 
@@ -55,20 +61,24 @@ export default (props) => {
     }
   }, [])
 
-  document.addEventListener(
-    'scroll',
-    () => {
+  useEffect(() => {
+    const scroll = () => {
       // Make sure the window is on an even multiple of
       // the page width
-      const ww = window.innerWidth
-      const dw = document.documentElement.scrollWidth
-      const s = window.scrollX
-      const page = s / ww
-      if(Math.abs(page - Math.round(page)) > 0.05) {
+      const f = frame.current
+      const fs = f.clientWidth
+      const s = f.scrollLeft
+      const page = s / fs
+      if(Math.abs(page - Math.round(page)) > 0.2) {
         setPage(Math.floor(page))
       }
     }
-  )
+
+    frame.current.addEventListener('scroll', scroll)
+    return () => {
+      frame.current.removeEventListener('scroll', scroll)
+    }
+  }, [])
   
   const process = (entries) => {
     const content = entries.find(
@@ -78,7 +88,7 @@ export default (props) => {
     content.getData(writer, (blob) => {
       const reader = new FileReader()
       reader.onload = async () => {
-        const doc = (new DOMParser()).parseFromString(reader.result, 'text/xml')
+        const doc = (new DOMParser()).parseFromString(reader.result, 'text/html')
         const spine = doc.querySelectorAll('spine itemref')
         let manifest = [], images = {}, styles = []
         for(const val of spine.values()) {
@@ -112,6 +122,7 @@ export default (props) => {
         })
         await Promise.allSettled(promises)
         setStyles(styles)
+        setImages(images)
         promises = manifest.map((m) => 
           new Promise((resolve, reject) => {
             const writer = new zip.BlobWriter('text/html')
@@ -154,7 +165,65 @@ export default (props) => {
     }, console.error)
   }, [url])
 
+  const pathList = <Menu>
+    {paths.map((p, i) => (
+      <Menu.Item key={i}>
+        {p.slice(1).map((d, i) => {
+          const q = JSON.stringify(p.slice(1, i + 2))
+          return <Link className='tag-link' to={`/?q=${q}`} key={i}>
+            <Tag>{d}</Tag>
+          </Link>
+        })}
+      </Menu.Item>
+    ))}
+  </Menu>
+
+  const fileList = <Menu>
+    {docs.map((d, i) => <Menu.Item key={i}>
+      <Link to={`/hash/${d.path}`}>{d.name}</Link>
+    </Menu.Item>
+    )}
+  </Menu>
+
   return <div className='mimir'>
+    <div className='view'>
+      <span title='Info' className='title-icon'>📕</span>
+      <Button title='Back' onClick={() => history.goBack()}><Icon type='arrow-left'/></Button>
+      <Link to='/'><Button title='Home'><Icon type='home'/></Button></Link>
+      {index &&
+        <Button title='Index'><Link to={`/book/${index.path}`}><Icon type='html5'/></Link></Button>
+      }
+      {paths.length > 0 &&
+        <Dropdown overlay={pathList} trigger={['click', 'hover']}>
+          <Button title='Paths'><Icon type='unordered-list'/></Button>
+        </Dropdown>
+      }
+      {docs.length > 0 &&
+        <Dropdown overlay={fileList} trigger={['click', 'hover']}>
+          <Button title='Files'><Icon type='folder'/></Button>
+        </Dropdown>
+      }
+      <a href='//github.com/dhappy/mimis' className='github'>
+        <Button title='Github'><Icon type='github'/></Button>
+      </a>
+      {Object.values(images).length > 0 && <div className='carousel'>
+        <Carousel ref={carousel}>
+          {Object.values(images).map((img, idx) => (
+            <div key={idx}><Tooltip title={img}>
+              <Link to={`/book/${img}/index.html#img`}>
+                <img alt={img} src={img}/>
+              </Link>
+            </Tooltip></div>
+          ))}
+        </Carousel>
+        <Button className='nav left' onClick={() => carousel.current.prev()}><Icon type='arrow-left'/></Button>
+        <Button className='nav right' onClick={() => carousel.current.next()}><Icon type='arrow-right'/></Button>
+      </div>}
+    </div>
+    {url ? '' : <div className='input'>
+      <h2>EPub URL:</h2>
+      <Input onPressEnter={evt => setURL(evt.target.value)}/>
+    </div>}
     {styles.map((s, i) => <link key={i} rel='stylesheet' href={s}/>)}
     <div className='frame' ref={frame}><div className='content'>
       {docs.map((d, i) => (

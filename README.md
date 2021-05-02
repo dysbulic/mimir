@@ -1,1 +1,0 @@
-Bare-bones epub/html reader.
